@@ -7,13 +7,13 @@
                     label="Título de la Tarea"
                     placeholder="Ej: Comprar víveres, Llamar al cliente, Revisar informes..."
                     required
-                    :error="form.errors.title"
+                    :error="form.errors?.title"
                     class="bg-white"
                 />
             </div>
 
             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <label class="flex items-center space-x-3 cursor-pointer group">
+                <label class="flex items-center space-x-3 cursor-pointer group mb-4">
                     <div class="relative">
                         <input
                             v-model="form.completed"
@@ -36,6 +36,22 @@
                         </span>
                     </div>
                 </label>
+                
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de vencimiento
+                    </label>
+                    <input
+                        v-model="form.due_date"
+                        type="date"
+                        :min="new Date().toISOString().split('T')[0]"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        :class="{ 'border-red-300': form.errors?.due_date }"
+                    >
+                    <p v-if="form.errors?.due_date" class="mt-1 text-sm text-red-600">
+                        {{ form.errors.due_date }}
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -51,46 +67,42 @@
                 </svg>
                 Cancelar
             </button>
-            <ButtonPrimary
+            <button
                 type="submit"
                 :disabled="form.processing"
-                class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 border-0 rounded-lg shadow-md hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 transform hover:scale-105"
+                class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 border-0 rounded-lg shadow-md hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-                <svg v-if="form.processing" class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-if="form.processing" class="w-4 h-4 mr-2 animate-spin inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
-                <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                {{ form.processing ? 'Guardando...' : '✓ Guardar Tarea' }}
-            </ButtonPrimary>
+                {{ form.processing ? 'Guardando...' : 'Guardar Tarea' }}
+            </button>
         </div>
     </form>
 </template>
 
 <script setup>
+import { defineProps, defineEmits } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Input from '@/Components/atoms/Input.vue';
-import ButtonPrimary from '@/Components/atoms/ButtonPrimary.vue';
 
 const props = defineProps({
-    processing: Boolean
+    form: {
+        type: Object,
+        required: true
+    },
+    processing: {
+        type: Boolean,
+        default: false
+    }
 });
 
-const form = useForm({
-    title: '',
-    description: '',
-    completed: false
-});
-
-const emit = defineEmits(['submitted']);
+const emit = defineEmits(['submitted', 'cancel']);
 
 const submit = () => {
-    form.post(route('tasks.store'), {
-        onSuccess: () => {
-            form.reset();
-            emit('submitted');
-        }
-    });
+    emit('submitted');
 };
 </script>

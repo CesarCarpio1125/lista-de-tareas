@@ -129,7 +129,7 @@
         
         <!-- Delete Button -->
         <button
-          @click="$inertia.delete(route('tasks.destroy', task.id))"
+          @click="deleteTask(task)"
           class="p-1.5 rounded-md transition-all duration-200 transform hover:scale-110 active:scale-95 bg-red-100 text-red-500 hover:bg-red-200"
           title="Eliminar tarea"
         >
@@ -153,9 +153,15 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['toggleComplete']);
+const emit = defineEmits(['toggleComplete', 'delete']);
 
 const toggleComplete = (task) => {
   emit('toggleComplete', task);
+};
+
+const deleteTask = (task) => {
+  if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+    emit('delete', task);
+  }
 };
 </script>

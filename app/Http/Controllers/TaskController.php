@@ -38,12 +38,53 @@ class TaskController extends Controller
         }
     }
 
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $tasks = Task::latest()->get();
+            $query = Task::query();
+            
+            // Handle filters
+            if ($request->has('filter')) {
+                switch ($request->filter) {
+                    case 'today':
+                        $query->whereDate('due_date', today());
+                        break;
+                    case 'week':
+                        $query->whereBetween('due_date', [now()->startOfWeek(), now()->endOfWeek()]);
+                        break;
+                    case 'pending':
+                        $query->where('completed', false);
+                        break;
+                    case 'completed':
+                        $query->where('completed', true);
+                        break;
+                    case 'with_due_date':
+                        $query->whereNotNull('due_date');
+                        break;
+                    case 'without_due_date':
+                        $query->whereNull('due_date');
+                        break;
+                    // 'all' and default case - no additional filtering needed
+                }
+            }
+            
+            // Handle search
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+            
+            $tasks = $query->latest()->get();
+            
             return Inertia::render('Tasks/Index', [
                 'tasks' => $tasks,
+                'filters' => [
+                    'filter' => $request->filter ?? 'all',
+                    'search' => $request->search ?? ''
+                ],
                 'message' => 'Tareas cargadas correctamente'
             ]);
         } catch (\Exception $e) {
@@ -66,7 +107,8 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'completed' => 'boolean'
+            'completed' => 'boolean',
+            'due_date' => 'nullable|date'  // Añadido
         ]);
 
         try {
@@ -74,6 +116,23 @@ class TaskController extends Controller
             return redirect()->route('tasks.index')->with('success', 'Tarea creada exitosamente');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al crear la tarea: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, Task $task)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'completed' => 'boolean',
+            'due_date' => 'nullable|date'  // Añadido
+        ]);
+
+        try {
+            $task->update($validated);
+            return redirect()->route('tasks.index')->with('success', 'Tarea actualizada exitosamente');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error al actualizar la tarea: ' . $e->getMessage());
         }
     }
 
@@ -89,22 +148,6 @@ class TaskController extends Controller
         return Inertia::render('Tasks/Edit', [
             'task' => $task
         ]);
-    }
-
-    public function update(Request $request, Task $task)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'completed' => 'boolean',
-        ]);
-
-        try {
-            $task->update($validated);
-            return redirect()->route('tasks.index')->with('success', 'Tarea actualizada exitosamente');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error al actualizar la tarea: ' . $e->getMessage());
-        }
     }
 
     public function destroy(Task $task)

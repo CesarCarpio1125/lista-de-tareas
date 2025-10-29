@@ -96,25 +96,47 @@
         <TaskEmptyState
             v-else
             :search="search"
-            :filter="filter"
         />
     </MainLayout>
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
-import MainLayout from '@/Components/templates/MainLayout.vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import MainLayout from '@/Layouts/MainLayout.vue';
 import TaskCard from './views/TaskCard.vue';
 import TaskFilters from './views/TaskFilters.vue';
 import TaskEmptyState from './views/TaskEmptyState.vue';
 import TaskStats from './views/TaskStats.vue';
 
+// Get initial filter and search from the URL or use defaults
+const page = usePage();
+const filter = ref(page.props.filters?.filter || 'all');
+const search = ref(page.props.filters?.search || '');
+
+// Filters for the TaskFilters component
+const filters = [
+  { label: 'Todas', value: 'all' },
+  { label: 'Pendientes', value: 'pending' },
+  { label: 'Completadas', value: 'completed' },
+  { label: 'Hoy', value: 'today' },
+  { label: 'Esta semana', value: 'week' },
+  { label: 'Con fecha', value: 'with_due_date' },
+  { label: 'Sin fecha', value: 'without_due_date' }
+];
+
 // Props
 const props = defineProps({
     tasks: {
         type: Array,
-        default: () => []
+        required: true
+    },
+    filters: {
+        type: Object,
+        default: () => ({
+            filter: 'all',
+            search: ''
+        })
     },
     message: {
         type: String,
@@ -122,46 +144,26 @@ const props = defineProps({
     }
 });
 
-// State
-const filter = ref('all');
-const search = ref('');
+// Watch for changes in filter or search
+watch([filter, search], ([newFilter, newSearch]) => {
+  router.get(route('tasks.index'), 
+    { 
+      filter: newFilter === 'all' ? null : newFilter, 
+      search: newSearch || null 
+    },
+    { 
+      preserveState: true,
+      replace: true,
+      preserveScroll: true
+    }
+  );
+});
 
 // Computed
 const filteredTasks = computed(() => {
-    let result = [...props.tasks];
-
-    // Aplicar filtros
-    if (filter.value === 'pending') {
-        result = result.filter(task => !task.completed);
-    } else if (filter.value === 'completed') {
-        result = result.filter(task => task.completed);
-    } else if (filter.value === 'today') {
-        const today = new Date().toISOString().split('T')[0];
-        result = result.filter(task => task.due_date === today);
-    } else if (filter.value === 'week') {
-        const today = new Date();
-        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-        result = result.filter(task => {
-            const taskDate = new Date(task.due_date);
-            return taskDate >= today && taskDate <= nextWeek;
-        });
-    } else if (filter.value === 'with_due_date') {
-        result = result.filter(task => task.due_date);
-    } else if (filter.value === 'without_due_date') {
-        result = result.filter(task => !task.due_date);
-    }
-
-    // Aplicar búsqueda
-    if (search.value) {
-        const searchTerm = search.value.toLowerCase();
-        result = result.filter(task =>
-            task.title.toLowerCase().includes(searchTerm) ||
-            (task.description && task.description.toLowerCase().includes(searchTerm)) ||
-            (task.tags && task.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
-        );
-    }
-
-    return result;
+    // Since filtering is now handled on the server side,
+    // we can just return the tasks as they are
+    return props.tasks || [];
 });
 
 const stats = computed(() => {
@@ -170,6 +172,7 @@ const stats = computed(() => {
     const pending = total - completed;
     const today = new Date().toISOString().split('T')[0];
     const thisWeek = props.tasks.filter(task => {
+        if (!task.due_date) return false;
         const taskDate = new Date(task.due_date);
         const nextWeek = new Date();
         nextWeek.setDate(nextWeek.getDate() + 7);
@@ -187,16 +190,6 @@ const stats = computed(() => {
     };
 });
 
-const filters = [
-    { label: 'Todas', value: 'all' },
-    { label: 'Pendientes', value: 'pending' },
-    { label: 'Completadas', value: 'completed' },
-    { label: 'Hoy', value: 'today' },
-    { label: 'Esta semana', value: 'week' },
-    { label: 'Con fecha', value: 'with_due_date' },
-    { label: 'Sin fecha', value: 'without_due_date' }
-];
-
 // Methods
 const toggleTask = (task) => {
     // Implementa la lógica para alternar el estado de la tarea
@@ -206,9 +199,15 @@ const toggleTask = (task) => {
 
 const deleteTask = (task) => {
     if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-        // Implementa la lógica para eliminar la tarea
-        // Por ejemplo: this.$inertia.delete(route('tasks.destroy', task.id))
-        console.log('Delete task:', task.id);
+        router.delete(route('tasks.destroy', task.id), {
+            onSuccess: () => {
+                // La tarea se eliminó exitosamente
+                // El mensaje de éxito se manejará con el flash message del controlador
+            },
+            onError: () => {
+                alert('No se pudo eliminar la tarea. Por favor, inténtalo de nuevo.');
+            }
+        });
     }
 };
 

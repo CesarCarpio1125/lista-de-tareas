@@ -11,7 +11,7 @@
     <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 mb-6 text-white shadow-md">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between">
         <div class="mb-4 md:mb-0">
-          <h2 class="text-xl md:text-2xl font-bold mb-1">¡Tu aplicación está funcionando perfectamente!</h2>
+       
           <p class="text-blue-100 text-sm mb-4 md:mb-0">Sistema de gestión de tareas moderno y eficiente</p>
           <Link
             href="/tasks"

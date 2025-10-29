@@ -69,10 +69,10 @@
               </div>
               <div class="p-6">
                 <Alert
-                  v-if="Object.keys($page.props.errors).length > 0"
+                  v-if="form.errors && Object.keys(form.errors).length > 0"
                   type="error"
                   title="¡Error!"
-                  :message="Object.values($page.props.errors).join(' ')"
+                  :message="Object.values(form.errors).join(' ')"
                   class="mb-6 border-l-4 border-red-400 bg-red-50"
                 />
 
@@ -92,22 +92,26 @@
 </template>
 
 <script setup>
-import { Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeftIcon } from '@heroicons/vue/20/solid';
-import MainLayout from '@/Components/templates/MainLayout.vue';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import MainLayout from '@/Layouts/MainLayout.vue';
 import Alert from '@/Components/atoms/Alert.vue';
 import TaskForm from '@/Components/molecules/TaskForm.vue';
 
+const page = usePage();
 const form = useForm({
   title: '',
   description: '',
-  completed: false
+  completed: false,
+  due_date: ''
 });
 
 const onSubmitted = () => {
   form.post('/tasks', {
     onSuccess: () => {
       form.reset();
+      // Redirect to tasks list after successful creation
+      window.location.href = '/tasks';
     },
     preserveScroll: true
   });
